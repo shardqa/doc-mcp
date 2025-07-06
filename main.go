@@ -4,46 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"os/exec"
-	"regexp"
-	"strings"
 )
-
-type ListToolsRequest struct {
-	ID   string `json:"id"`
-	Type string `json:"type"`
-}
-
-type Tool struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-}
-
-type ListToolsResponse struct {
-	ID    string `json:"id"`
-	Type  string `json:"type"`
-	Tools []Tool `json:"tools"`
-}
-
-type CreateMarkdownFileRequest struct {
-	ID      string `json:"id"`
-	Type    string `json:"type"`
-	Name    string `json:"name"`
-	Content string `json:"content"`
-}
-
-type CreateMarkdownFileResponse struct {
-	ID      string   `json:"id"`
-	Type    string   `json:"type"`
-	Success bool     `json:"success"`
-	Warnings []string `json:"warnings"`
-}
-
-type ToolOffering struct {
-	Name        string                 `json:"name"`
-	Description string                 `json:"description"`
-	Parameters  map[string]interface{} `json:"parameters"`
-}
 
 func main() {
 	decoder := json.NewDecoder(os.Stdin)
@@ -61,9 +22,6 @@ func main() {
 			}
 			continue
 		}
-		println("RECEIVED METHOD:", rpcReq.Method)
-		b, _ := json.Marshal(rpcReq)
-		println("RECEIVED REQUEST:", string(b))
 		switch rpcReq.Method {
 		case "initialize":
 			resp := map[string]interface{}{
@@ -90,127 +48,13 @@ func main() {
 		case "notifications/initialized", "initialized":
 			continue
 		case "tools/list":
-			inputSchema := map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"name": map[string]interface{}{
-						"type":        "string",
-						"description": "The filename to create",
-					},
-					"content": map[string]interface{}{
-						"type":        "string",
-						"description": "The markdown content",
-					},
-				},
-				"required": []string{"name", "content"},
-			}
-			tools := []map[string]interface{}{
-				{
-					"name":        "create_markdown_file",
-					"description": "Create a new markdown file in the doc/ folder.",
-					"inputSchema": inputSchema,
-				},
-			}
-			resp := map[string]interface{}{
-				"jsonrpc": "2.0",
-				"id":      rpcReq.ID,
-				"result": map[string]interface{}{
-					"tools": tools,
-				},
-			}
-			encoder.Encode(resp)
+			handleToolsList(rpcReq.ID, encoder)
 		case "listOfferings", "list_tools":
-			offerings := []ToolOffering{
-				{
-					Name:        "create_markdown_file",
-					Description: "Create a new markdown file in the doc/ folder.",
-					Parameters: map[string]interface{}{
-						"type": "object",
-						"properties": map[string]interface{}{
-							"name": map[string]interface{}{
-								"type":        "string",
-								"description": "The filename to create",
-							},
-							"content": map[string]interface{}{
-								"type":        "string",
-								"description": "The markdown content",
-							},
-						},
-						"required": []string{"name", "content"},
-					},
-				},
-			}
-			resp := map[string]interface{}{
-				"jsonrpc": "2.0",
-				"id":      rpcReq.ID,
-				"result": map[string]interface{}{
-					"offerings": offerings,
-				},
-			}
-			encoder.Encode(resp)
+			handleListOfferings(rpcReq.ID, encoder)
 		case "create_markdown_file":
-			var req CreateMarkdownFileRequest
-			json.Unmarshal(rpcReq.Params, &req)
-			warnings := []string{}
-			linkRe := regexp.MustCompile(`\[[^\]]+\]\(([^)]+)\)`)
-			links := linkRe.FindAllStringSubmatch(req.Content, -1)
-			if len(links) < 2 {
-				warnings = append(warnings, "File should have at least 2 internal links.")
-			}
-			lines := strings.Split(req.Content, "\n")
-			if len(lines) > 100 {
-				warnings = append(warnings, "File should not exceed 100 lines.")
-			}
-			os.MkdirAll("doc", 0755)
-			f, err := os.Create("doc/" + req.Name)
-			success := false
-			if err == nil {
-				f.WriteString(req.Content)
-				f.Close()
-				success = true
-			}
-			resp := CreateMarkdownFileResponse{
-				ID:      req.ID,
-				Type:    "create_markdown_file_response",
-				Success: success,
-				Warnings: warnings,
-			}
-			encoder.Encode(resp)
+			handleCreateMarkdownFile(rpcReq.Params, encoder)
 		case "edit_markdown_file":
-			var req struct {
-				ID      string `json:"id"`
-				Type    string `json:"type"`
-				Name    string `json:"name"`
-				Content string `json:"content"`
-			}
-			json.Unmarshal(rpcReq.Params, &req)
-			warnings := []string{}
-			linkRe := regexp.MustCompile(`\[[^\]]+\]\(([^)]+)\)`)
-			links := linkRe.FindAllStringSubmatch(req.Content, -1)
-			if len(links) < 2 {
-				warnings = append(warnings, "File should have at least 2 internal links.")
-			}
-			lines := strings.Split(req.Content, "\n")
-			if len(lines) > 100 {
-				warnings = append(warnings, "File should not exceed 100 lines.")
-			}
-			os.MkdirAll("doc", 0755)
-			f, err := os.Create("doc/" + req.Name)
-			success := false
-			if err == nil {
-				f.WriteString(req.Content)
-				f.Close()
-				cmd := exec.Command("markdownlint", "--fix", "doc/"+req.Name)
-				cmd.Run()
-				success = true
-			}
-			resp := map[string]interface{}{
-				"id":      req.ID,
-				"type":    "edit_markdown_file_response",
-				"success": success,
-				"warnings": warnings,
-			}
-			encoder.Encode(resp)
+			handleEditMarkdownFile(rpcReq.Params, encoder)
 		default:
 			errResp := map[string]interface{}{
 				"jsonrpc": "2.0",

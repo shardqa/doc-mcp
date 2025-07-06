@@ -12,7 +12,7 @@ func handleToolsList(rpcReqID interface{}, encoder *json.Encoder) {
 		"properties": map[string]interface{}{
 			"name": map[string]interface{}{
 				"type":        "string",
-				"description": "The filename to create",
+				"description": "The filename to create or edit",
 			},
 			"content": map[string]interface{}{
 				"type":        "string",
@@ -27,6 +27,11 @@ func handleToolsList(rpcReqID interface{}, encoder *json.Encoder) {
 			"description": "Create a new markdown file in the doc/ folder.",
 			"inputSchema": inputSchema,
 		},
+		{
+			"name":        "edit_markdown_file",
+			"description": "Edit an existing markdown file in the doc/ folder.",
+			"inputSchema": inputSchema,
+		},
 	}
 	resp := map[string]interface{}{
 		"jsonrpc": "2.0",
@@ -39,24 +44,30 @@ func handleToolsList(rpcReqID interface{}, encoder *json.Encoder) {
 }
 
 func handleListOfferings(rpcReqID interface{}, encoder *json.Encoder) {
+	parameters := map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"name": map[string]interface{}{
+				"type":        "string",
+				"description": "The filename to create or edit",
+			},
+			"content": map[string]interface{}{
+				"type":        "string",
+				"description": "The markdown content",
+			},
+		},
+		"required": []string{"name", "content"},
+	}
 	offerings := []ToolOffering{
 		{
 			Name:        "create_markdown_file",
 			Description: "Create a new markdown file in the doc/ folder.",
-			Parameters: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"name": map[string]interface{}{
-						"type":        "string",
-						"description": "The filename to create",
-					},
-					"content": map[string]interface{}{
-						"type":        "string",
-						"description": "The markdown content",
-					},
-				},
-				"required": []string{"name", "content"},
-			},
+			Parameters:  parameters,
+		},
+		{
+			Name:        "edit_markdown_file",
+			Description: "Edit an existing markdown file in the doc/ folder.",
+			Parameters:  parameters,
 		},
 	}
 	resp := map[string]interface{}{

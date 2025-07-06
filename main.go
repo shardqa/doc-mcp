@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"github.com/shardqa/doc-mcp/internal"
 )
 
 func main() {
@@ -48,13 +49,13 @@ func main() {
 		case "notifications/initialized", "initialized":
 			continue
 		case "tools/list":
-			handleToolsList(rpcReq.ID, encoder)
+			internal.HandleToolsList(rpcReq.ID, encoder)
 		case "listOfferings", "list_tools":
-			handleListOfferings(rpcReq.ID, encoder)
+			internal.HandleListOfferings(rpcReq.ID, encoder)
 		case "create_markdown_file":
-			handleCreateMarkdownFile(rpcReq.Params, encoder)
+			internal.HandleCreateMarkdownFile(rpcReq.Params, encoder)
 		case "edit_markdown_file":
-			handleEditMarkdownFile(rpcReq.Params, encoder)
+			internal.HandleEditMarkdownFile(rpcReq.Params, encoder)
 		default:
 			errResp := map[string]interface{}{
 				"jsonrpc": "2.0",

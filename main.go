@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"regexp"
@@ -46,7 +45,6 @@ type ToolOffering struct {
 }
 
 func main() {
-	fmt.Fprintln(os.Stderr, "MCP server started")
 	decoder := json.NewDecoder(os.Stdin)
 	encoder := json.NewEncoder(os.Stdout)
 	for {
@@ -58,16 +56,12 @@ func main() {
 		}
 		if err := decoder.Decode(&rpcReq); err != nil {
 			if err == io.EOF {
-				fmt.Fprintln(os.Stderr, "No more input, exiting...")
 				break
 			}
-			fmt.Fprintln(os.Stderr, "Decode error:", err)
 			continue
 		}
-		fmt.Fprintf(os.Stderr, "Received request: method=%s, id=%v, params=%s\n", rpcReq.Method, rpcReq.ID, string(rpcReq.Params))
 		switch rpcReq.Method {
 		case "initialize":
-			fmt.Fprintln(os.Stderr, "Handling initialize request")
 			resp := map[string]interface{}{
 				"jsonrpc": "2.0",
 				"id":      rpcReq.ID,
@@ -88,13 +82,10 @@ func main() {
 					},
 				},
 			}
-			fmt.Fprintln(os.Stderr, "Sending initialize response")
 			encoder.Encode(resp)
 		case "notifications/initialized", "initialized":
-			fmt.Fprintln(os.Stderr, "Ignoring notifications/initialized or initialized (no response needed)")
 			continue
 		case "tools/list":
-			fmt.Fprintln(os.Stderr, "Handling tools/list request")
 			inputSchema := map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
@@ -123,10 +114,8 @@ func main() {
 					"tools": tools,
 				},
 			}
-			fmt.Fprintln(os.Stderr, "Sending tools/list response")
 			encoder.Encode(resp)
 		case "listOfferings", "list_tools":
-			fmt.Fprintln(os.Stderr, "Handling listOfferings/list_tools request")
 			offerings := []ToolOffering{
 				{
 					Name:        "create_markdown_file",
@@ -154,10 +143,8 @@ func main() {
 					"offerings": offerings,
 				},
 			}
-			fmt.Fprintln(os.Stderr, "Sending listOfferings/list_tools response")
 			encoder.Encode(resp)
 		case "create_markdown_file":
-			fmt.Fprintln(os.Stderr, "Handling create_markdown_file request")
 			var req CreateMarkdownFileRequest
 			json.Unmarshal(rpcReq.Params, &req)
 			warnings := []string{}
@@ -184,10 +171,8 @@ func main() {
 				Success: success,
 				Warnings: warnings,
 			}
-			fmt.Fprintln(os.Stderr, "Sending create_markdown_file response")
 			encoder.Encode(resp)
 		default:
-			fmt.Fprintf(os.Stderr, "Unknown method: %s\n", rpcReq.Method)
 			errResp := map[string]interface{}{
 				"jsonrpc": "2.0",
 				"id":      rpcReq.ID,
@@ -196,7 +181,6 @@ func main() {
 					"message": "Method not found",
 				},
 			}
-			fmt.Fprintln(os.Stderr, "Sending error response for unknown method")
 			encoder.Encode(errResp)
 		}
 	}

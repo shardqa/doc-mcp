@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 )
@@ -60,6 +61,9 @@ func main() {
 			}
 			continue
 		}
+		println("RECEIVED METHOD:", rpcReq.Method)
+		b, _ := json.Marshal(rpcReq)
+		println("RECEIVED REQUEST:", string(b))
 		switch rpcReq.Method {
 		case "initialize":
 			resp := map[string]interface{}{
@@ -170,6 +174,41 @@ func main() {
 				Type:    "create_markdown_file_response",
 				Success: success,
 				Warnings: warnings,
+			}
+			encoder.Encode(resp)
+		case "edit_markdown_file":
+			var req struct {
+				ID      string `json:"id"`
+				Type    string `json:"type"`
+				Name    string `json:"name"`
+				Content string `json:"content"`
+			}
+			json.Unmarshal(rpcReq.Params, &req)
+			warnings := []string{}
+			linkRe := regexp.MustCompile(`\[[^\]]+\]\(([^)]+)\)`)
+			links := linkRe.FindAllStringSubmatch(req.Content, -1)
+			if len(links) < 2 {
+				warnings = append(warnings, "File should have at least 2 internal links.")
+			}
+			lines := strings.Split(req.Content, "\n")
+			if len(lines) > 100 {
+				warnings = append(warnings, "File should not exceed 100 lines.")
+			}
+			os.MkdirAll("doc", 0755)
+			f, err := os.Create("doc/" + req.Name)
+			success := false
+			if err == nil {
+				f.WriteString(req.Content)
+				f.Close()
+				cmd := exec.Command("markdownlint", "--fix", "doc/"+req.Name)
+				cmd.Run()
+				success = true
+			}
+			resp := map[string]interface{}{
+				"id":      req.ID,
+				"type":    "edit_markdown_file_response",
+				"success": success,
+				"warnings": warnings,
 			}
 			encoder.Encode(resp)
 		default:

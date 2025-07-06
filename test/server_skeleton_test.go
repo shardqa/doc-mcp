@@ -1,9 +1,8 @@
-package main
+package test
 
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"os/exec"
 	"testing"
 	"time"
@@ -22,6 +21,20 @@ type ListToolsResponse struct {
 	Tools []Tool `json:"tools"`
 }
 
+type Offering struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+type ListToolsResult struct {
+	Offerings []Offering `json:"offerings"`
+}
+
+type ListToolsRPCResponse struct {
+	ID     string          `json:"id"`
+	Result ListToolsResult `json:"result"`
+}
+
 func TestListTools(t *testing.T) {
 	cmd := exec.Command("go", "run", "main.go")
 	cmd.Dir = ".."
@@ -36,19 +49,19 @@ func TestListTools(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	req := `{"id":"1","type":"list_tools"}`
+	req := `{"jsonrpc":"2.0","id":"1","method":"list_tools","params":{}}`
 	_, err = stdin.Write([]byte(req + "\n"))
 	require.NoError(t, err, "failed to write to stdin")
 	stdin.Close()
 
 	scanner := bufio.NewScanner(stdout)
-	var resp ListToolsResponse
+	serr := bufio.NewScanner(stderr)
+	var resp ListToolsRPCResponse
 	found := false
 	timeout := time.After(5 * time.Second)
 	for !found {
 		select {
 		case <-timeout:
-			serr := bufio.NewScanner(stderr)
 			for serr.Scan() {
 				t.Logf("STDERR: %s", serr.Text())
 			}
@@ -56,15 +69,17 @@ func TestListTools(t *testing.T) {
 		default:
 			if scanner.Scan() {
 				line := scanner.Text()
-				fmt.Printf("STDOUT: %s\n", line)
+				t.Logf("STDOUT: %s", line)
 				err := json.Unmarshal([]byte(line), &resp)
-				require.NoError(t, err, "invalid JSON response")
-				require.Equal(t, "list_tools_response", resp.Type)
-				require.NotEmpty(t, resp.Tools)
-				// Check for create_markdown_file tool
+				if err != nil {
+					t.Logf("JSON Unmarshal error: %v", err)
+					continue
+				}
+				t.Logf("Unmarshaled response: %+v", resp)
+				// Check for create_markdown_file tool in offerings
 				foundTool := false
-				for _, tool := range resp.Tools {
-					if tool.Name == "create_markdown_file" && tool.Description != "" {
+				for _, offering := range resp.Result.Offerings {
+					if offering.Name == "create_markdown_file" && offering.Description != "" {
 						foundTool = true
 						break
 					}
@@ -73,5 +88,8 @@ func TestListTools(t *testing.T) {
 				found = true
 			}
 		}
+	}
+	for serr.Scan() {
+		t.Logf("STDERR: %s", serr.Text())
 	}
 }

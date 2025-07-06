@@ -1,4 +1,4 @@
-package main
+package test
 
 import (
 	"bufio"
@@ -40,11 +40,16 @@ func TestCreateMarkdownFile(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	content := "# Title\n\nThis is a [link1](file1.md) and [link2](file2.md)."
-	req := CreateMarkdownFileRequest{
-		ID:      "1",
-		Type:    "create_markdown_file",
-		Name:    "test1.md",
-		Content: content,
+	req := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id": "1",
+		"method": "create_markdown_file",
+		"params": map[string]interface{}{
+			"id": "1",
+			"type": "create_markdown_file",
+			"name": "test1.md",
+			"content": content,
+		},
 	}
 	b, _ := json.Marshal(req)
 	_, err = stdin.Write(append(b, '\n'))

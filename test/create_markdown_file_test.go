@@ -28,7 +28,7 @@ type CreateMarkdownFileResponse struct {
 
 func TestCreateMarkdownFile(t *testing.T) {
 	os.Remove("doc/test1.md")
-	cmd := exec.Command("go", "run", "main.go")
+	cmd := exec.Command("go", "run", ".")
 	cmd.Dir = ".."
 	stdin, err := cmd.StdinPipe()
 	require.NoError(t, err)

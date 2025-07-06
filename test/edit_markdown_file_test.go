@@ -10,7 +10,7 @@ import (
 )
 
 func runMCP(jsonrpcReq string) (map[string]interface{}, string, error) {
-	cmd := exec.Command("go", "run", "main.go")
+	cmd := exec.Command("go", "run", ".")
 	cmd.Dir = ".."
 	stdin, _ := cmd.StdinPipe()
 	stdout, _ := cmd.StdoutPipe()

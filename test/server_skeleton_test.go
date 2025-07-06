@@ -36,7 +36,7 @@ type ListToolsRPCResponse struct {
 }
 
 func TestListTools(t *testing.T) {
-	cmd := exec.Command("go", "run", "main.go")
+	cmd := exec.Command("go", "run", ".")
 	cmd.Dir = ".."
 	stdin, err := cmd.StdinPipe()
 	require.NoError(t, err, "failed to get stdin")

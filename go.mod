@@ -1,4 +1,4 @@
-module github.com/richardrosario/mcp
+module github.com/shardqa/doc-mcp
 
 go 1.24.2
 

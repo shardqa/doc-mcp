@@ -4,8 +4,8 @@
 This project implements an MCP (Model Context Protocol) server for integration with LLMs (Large Language Models). Its main goal is to manage a markdown-based knowledge base located in the `/doc` directory, exposing tools and resources to LLMs via stdio and JSON-RPC.
 
 ## Key Requirements
-- **Transport & Protocol:** Communicate over stdio using JSON-RPC 2.0.
-- **Tool/Resource Registration:** Expose tools (e.g., create/edit/validate markdown files, refactor folders, aggregate chat context) and resources (list/read files) to LLMs.
+- **Transport & Protocol:** Communicate over stdio using JSON-RPC 2.0. Only JSON-RPC responses are sent to stdout; all logs go to stderr.
+- **Tool/Resource Registration:** Expose tools (e.g., create/edit/validate markdown files, refactor folders, aggregate chat context) and resources (list/read files) to LLMs. Tool names must use only underscores (no dashes) for maximum compatibility with Cursor.
 - **Validation Rules:**
   - Every markdown file must have at least two internal links to other markdown files.
   - No markdown file may exceed 100 lines.
@@ -25,13 +25,18 @@ This project implements an MCP (Model Context Protocol) server for integration w
 - **Testing:** Standard Go `testing` package with `testify` for expressive assertions and helpers.
 - **Tool Registration:** Tools are statically registered for now, but may become dynamic/configurable in the future.
 
-## Design & Process Notes
-- The MCP server is not a CLI tool; it is a backend service for LLM integration, exposing tools/resources via a protocol.
-- All validation and organization rules are implemented as part of the tool logic, with warnings returned in responses.
-- The server is robust to closed stdin and designed for long-lived operation.
-- The project is structured for extensibility, with clear separation of concerns and a focus on maintainability.
+## MCP Server Design & Cursor Integration
+- The MCP server is a backend service for LLM integration, exposing tools/resources via JSON-RPC 2.0 over stdio.
+- The server must respond to `initialize` with a `serverInfo`, `protocolVersion`, and `capabilities` object in the result.
+- The server must respond to `listOfferings` (and `list_tools`) with a top-level `offerings` array, each tool including `name`, `description`, and a `parameters` JSON schema.
+- All logs must go to stderr; only JSON-RPC responses are sent to stdout.
+- The process must stay alive after stdin closes (block with `select {}`) to match Cursor's expectations.
+- Tool names must use underscores only; dashes can cause Cursor to ignore the tool.
+- Place the MCP server at the top of the `mcp.json` config and, if troubleshooting, disable other servers to avoid Cursor's internal tool/server limit.
+- If Cursor still fails to recognize the server, restart Cursor, try again, and use the MCP Inspector to verify server output.
+- These steps are based on current community and official knowledge; Cursor's MCP support is evolving and may require further tweaks as new versions are released.
 
 ## Next Steps
 - Continue implementing and testing each tool/resource endpoint using TDD.
 - Evolve tool/resource schemas and metadata as requirements become clearer.
-- Keep this knowledge base updated as the project grows. 
+- Keep this knowledge base updated as the project grows, especially with integration lessons and platform-specific quirks. 

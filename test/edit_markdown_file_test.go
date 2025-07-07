@@ -21,28 +21,60 @@ func runMCP(jsonrpcReq string) (map[string]interface{}, string, error) {
 	outBytes, _ := io.ReadAll(stdout)
 	errBytes, _ := io.ReadAll(stderr)
 	cmd.Wait()
-	respLine := string(outBytes)
+	
+	fullOutput := string(outBytes)
 	if len(errBytes) > 0 {
-		respLine += "\nSTDERR: " + string(errBytes)
+		fullOutput += "\nSTDERR: " + string(errBytes)
 	}
-	var resp map[string]interface{}
-	json.Unmarshal(outBytes, &resp)
-	return resp, respLine, nil
+	
+	lines := strings.Split(strings.TrimSpace(string(outBytes)), "\n")
+	var lastResponse map[string]interface{}
+	
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		var resp map[string]interface{}
+		if err := json.Unmarshal([]byte(line), &resp); err == nil {
+			if id, exists := resp["id"]; !exists || id != "init" {
+				lastResponse = resp
+			}
+		}
+	}
+	
+	return lastResponse, fullOutput, nil
 }
 
 func TestEditMarkdownFile_Success(t *testing.T) {
 	os.Remove("doc/test.md")
-	input := `{"jsonrpc":"2.0","id":"1","method":"edit_markdown_file","params":{"id":"1","type":"edit_markdown_file","name":"test.md","content":"# Title\n\nThis is a [link1](http://example.com) and another [link2](http://example.org).\n"}}`
+	
+	initReq := `{"jsonrpc":"2.0","id":"init","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}`
+	initNotif := `{"jsonrpc":"2.0","method":"notifications/initialized"}`
+	toolCall := `{"jsonrpc":"2.0","id":"1","method":"tools/call","params":{"name":"edit_markdown_file","arguments":{"name":"test.md","content":"# Title\n\nThis is a [link1](http://example.com) and another [link2](http://example.org).\n"}}}`
+	
+	input := initReq + "\n" + initNotif + "\n" + toolCall
 	println("REQUEST:", input)
 	resp, respLine, _ := runMCP(input)
-	if resp["type"] == nil {
-		t.Fatalf("Expected edit_markdown_file_response, got nil. Full response: %s", respLine)
+	
+	if resp["jsonrpc"] == nil {
+		t.Fatalf("Expected JSON-RPC response, got nil. Full response: %s", respLine)
 	}
-	if resp["type"] != "edit_markdown_file_response" {
-		t.Fatalf("Expected edit_markdown_file_response, got %v", resp["type"])
+	if resp["jsonrpc"] != "2.0" {
+		t.Fatalf("Expected jsonrpc 2.0, got %v", resp["jsonrpc"])
 	}
-	if !resp["success"].(bool) {
-		t.Fatalf("Expected success true, got false")
+	if resp["id"] != "1" {
+		t.Fatalf("Expected id 1, got %v", resp["id"])
+	}
+	result, ok := resp["result"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected result object, got %v", resp["result"])
+	}
+	if result["isError"] != nil && result["isError"].(bool) {
+		t.Fatalf("Expected isError false, got true")
+	}
+	content, ok := result["content"].([]interface{})
+	if !ok || len(content) == 0 {
+		t.Fatalf("Expected non-empty content array, got %v", result["content"])
 	}
 	os.Remove("doc/test.md")
 }
@@ -75,7 +107,12 @@ func TestEditMarkdownFile_TooFewLinks(t *testing.T) {
 
 func TestEditMarkdownFile_MarkdownlintFix(t *testing.T) {
 	os.Remove("doc/test.md")
-	input := `{"jsonrpc":"2.0","id":"2","method":"edit_markdown_file","params":{"id":"2","type":"edit_markdown_file","name":"test.md","content":"#Title\n\nThis is a [link1](http://example.com) and another [link2](http://example.org).\n"}}`
+	
+	initReq := `{"jsonrpc":"2.0","id":"init","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}`
+	initNotif := `{"jsonrpc":"2.0","method":"notifications/initialized"}`
+	toolCall := `{"jsonrpc":"2.0","id":"2","method":"tools/call","params":{"name":"edit_markdown_file","arguments":{"name":"test.md","content":"#Title\n\nThis is a [link1](http://example.com) and another [link2](http://example.org).\n"}}}`
+	
+	input := initReq + "\n" + initNotif + "\n" + toolCall
 	runMCP(input)
 	out, _ := os.ReadFile("doc/test.md")
 	if strings.Contains(string(out), "#Title") {

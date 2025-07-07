@@ -39,4 +39,16 @@ This project implements an MCP (Model Context Protocol) server for integration w
 ## Next Steps
 - Continue implementing and testing each tool/resource endpoint using TDD.
 - Evolve tool/resource schemas and metadata as requirements become clearer.
-- Keep this knowledge base updated as the project grows, especially with integration lessons and platform-specific quirks. 
+- Keep this knowledge base updated as the project grows, especially with integration lessons and platform-specific quirks.
+
+## Features: Markdown File Creation
+
+- The server supports creating markdown files with arbitrary content via the `create_markdown_file` method.
+- Files can be created with minimal content (e.g., just 'test').
+- If a file does not meet validation rules (e.g., fewer than two internal links), the server issues warnings but still creates the file.
+- After every file creation, `markdownlint --fix` is automatically run on the new file.
+
+### TDD Process Example
+- A failing test was first written to create a markdown file with the content 'test'.
+- The feature was implemented to pass the test, ensuring file creation and warning emission.
+- The implementation was refactored to ensure markdownlint is always run after file creation, matching the edit behavior. 

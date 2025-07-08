@@ -1,9 +1,9 @@
 #!/bin/sh
-cd /home/richard_rosario/git/doc-mcp
+SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
 
 # Use pre-built binary if it exists, otherwise compile and run
-if [ -f "./doc-mcp" ]; then
-    exec ./doc-mcp
+if [ -f "$SCRIPT_DIR/doc-mcp" ]; then
+    exec "$SCRIPT_DIR/doc-mcp"
 else
-    exec go run .
+    exec go run "$SCRIPT_DIR"
 fi 

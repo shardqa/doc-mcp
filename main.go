@@ -15,6 +15,7 @@ func main() {
 		mcp.NewServerTool[server.CreateMarkdownParams, any]("create_markdown_file", "Create a new markdown file in the doc/ folder.", server.CreateMarkdownFile),
 		mcp.NewServerTool[server.EditMarkdownParams, any]("edit_markdown_file", "Edit an existing markdown file in the doc/ folder.", server.EditMarkdownFile),
 		mcp.NewServerTool[server.ValidateMarkdownParams, any]("validate_markdown_file", "Validate markdown content and return warnings without modifying files.", server.ValidateMarkdownFile),
+		mcp.NewServerTool[server.RefactorFolderParams, any]("refactor_folder", "Refactor a folder by creating subdirectories and moving files.", server.RefactorFolder),
 	)
 	
 	if err := srv.Run(context.Background(), mcp.NewStdioTransport()); err != nil {

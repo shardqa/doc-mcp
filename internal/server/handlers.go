@@ -105,4 +105,25 @@ func ValidateMarkdownFile(ctx context.Context, session *mcp.ServerSession, param
 		Content: content,
 		IsError: false,
 	}, nil
+}
+
+func RefactorFolder(ctx context.Context, session *mcp.ServerSession, params *mcp.CallToolParamsFor[RefactorFolderParams]) (*mcp.CallToolResultFor[any], error) {
+	folderPath := params.Arguments.FolderPath
+	if folderPath == "" {
+		folderPath = "doc"
+	}
+
+	// This function will be implemented in refactor.go
+	err := RefactorFolderLogic(folderPath)
+	if err != nil {
+		return &mcp.CallToolResultFor[any]{
+			Content: []mcp.Content{&mcp.TextContent{Text: "Failed to refactor folder: " + err.Error()}},
+			IsError: true,
+		}, nil
+	}
+
+	return &mcp.CallToolResultFor[any]{
+		Content: []mcp.Content{&mcp.TextContent{Text: "Folder refactored successfully"}},
+		IsError: false,
+	}, nil
 } 

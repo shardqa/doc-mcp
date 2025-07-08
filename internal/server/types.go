@@ -12,4 +12,8 @@ type EditMarkdownParams struct {
 
 type ValidateMarkdownParams struct {
 	Content string `json:"content"`
+}
+
+type RefactorFolderParams struct {
+	FolderPath string `json:"folder_path,omitempty"`
 } 

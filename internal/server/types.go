@@ -2,6 +2,7 @@ package server
 
 type CreateMarkdownParams struct {
 	Name    string `json:"name"`
+	Path    string `json:"path,omitempty"`
 	Content string `json:"content"`
 }
 

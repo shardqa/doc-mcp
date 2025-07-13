@@ -5,22 +5,48 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-
+	"path/filepath"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func CreateMarkdownFile(ctx context.Context, session *mcp.ServerSession, params *mcp.CallToolParamsFor[CreateMarkdownParams]) (*mcp.CallToolResultFor[any], error) {
 	warnings := validateMarkdown(params.Arguments.Content)
 
-	err := os.MkdirAll("doc", 0755)
+	folder := params.Arguments.Path
+	if folder == "" {
+		folder = "."
+	}
+
+	if strings.HasPrefix(folder, "/") || strings.Contains(folder, "..") {
+		return &mcp.CallToolResultFor[any]{
+			Content: []mcp.Content{&mcp.TextContent{Text: "Invalid folder path"}},
+			IsError: true,
+		}, nil
+	}
+
+	err := os.MkdirAll(folder, 0755)
 	if err != nil {
 		return &mcp.CallToolResultFor[any]{
 			Content: []mcp.Content{&mcp.TextContent{Text: "Failed to create directory: " + err.Error()}},
 			IsError: true,
 		}, nil
 	}
+	cwd, err := os.Getwd()
+	f, _ := os.OpenFile("/tmp/mcp.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	defer f.Close()
 
-	f, err := os.Create("doc/" + params.Arguments.Name)
+	f.WriteString("Current working directory: " + cwd + "\n")
+
+	if err != nil {
+		return &mcp.CallToolResultFor[any]{
+			Content: []mcp.Content{&mcp.TextContent{Text: "Failed to get current working directory: " + err.Error()}},
+			IsError: true,
+		}, nil
+	}
+
+	filePath := filepath.Join(cwd, folder, params.Arguments.Name)
+
+	f, err = os.Create(filePath)
 	if err != nil {
 		return &mcp.CallToolResultFor[any]{
 			Content: []mcp.Content{&mcp.TextContent{Text: "Failed to create file: " + err.Error()}},
@@ -40,7 +66,8 @@ func CreateMarkdownFile(ctx context.Context, session *mcp.ServerSession, params 
 	cmd := exec.Command("markdownlint", "--fix", "doc/"+params.Arguments.Name)
 	cmd.Run()
 
-	content := []mcp.Content{&mcp.TextContent{Text: "File created successfully"}}
+
+	content := []mcp.Content{&mcp.TextContent{Text: "File created successfully: " + filePath}}
 	if len(warnings) > 0 {
 		content = append(content, &mcp.TextContent{Text: "Warnings: " + strings.Join(warnings, "; ")})
 	}

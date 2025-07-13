@@ -1,9 +1,17 @@
 #!/bin/sh
-SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
 
-# Use pre-built binary if it exists, otherwise compile and run
-if [ -f "$SCRIPT_DIR/doc-mcp" ]; then
-    exec "$SCRIPT_DIR/doc-mcp"
-else
-    exec go run "$SCRIPT_DIR"
-fi 
+echo "Running MCP from project directory: $PWD" > /tmp/mcp.log
+
+# Salva o diretório atual (projeto)
+PROJECT_DIR="$PWD"
+
+# Caminho absoluto do binário
+MCP_BIN="/home/richard_rosario/git/doc-mcp/doc-mcp"
+
+# Muda para o diretório do projeto
+cd "$PROJECT_DIR"
+
+echo "Changed to project directory: $PWD" >> /tmp/mcp.log
+
+# Executa o binário, mas a partir do diretório do projeto
+exec "$MCP_BIN" 
